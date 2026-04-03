@@ -1,0 +1,1226 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1115" />
+  <meta name="description" content="Lighting Ops Todo - Local-first checklist for lighting operations" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <title>Lighting Ops Todo</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --panel: #171a21;
+      --panel-2: #1f2430;
+      --text: #e7ebf5;
+      --muted: #9aa3b8;
+      --accent: #5aa9ff;
+      --danger: #ff6b6b;
+      --ok: #40d78c;
+      --line: #2a3140;
+      --tap: 44px;
+      --radius: 12px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .app {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 14px;
+      padding-bottom: calc(10px + env(safe-area-inset-bottom));
+      display: flex;
+      flex-direction: column;
+      height: 100dvh;
+      overflow: hidden;
+    }
+
+    .switch {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+      background: var(--bg);
+      padding-bottom: 8px;
+      flex-shrink: 0;
+      z-index: 20;
+    }
+
+    .switch button {
+      flex: 1;
+    }
+
+    button, input, textarea {
+      font: inherit;
+    }
+
+    button {
+      min-height: var(--tap);
+      border: 1px solid var(--line);
+      background: var(--panel-2);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 0 12px;
+      touch-action: manipulation;
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .switch button.active {
+      border-color: var(--accent);
+      color: white;
+      box-shadow: inset 0 0 0 1px rgba(90, 169, 255, 0.5);
+    }
+
+    .main-content {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+
+    .view {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .hidden { display: none !important; }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px;
+    }
+
+    .card h2 {
+      margin: 0 0 10px;
+      font-size: 1rem;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 0.93rem;
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .task-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .task-row:first-of-type {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .task-text {
+      word-break: break-word;
+      line-height: 1.3;
+    }
+
+    .task-text.checked {
+      text-decoration: line-through;
+      color: var(--muted);
+    }
+
+    .controls {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .drag-handle {
+      min-width: 34px;
+      width: 34px;
+      padding: 0;
+      font-size: 0.95rem;
+      line-height: 1;
+      letter-spacing: -0.08em;
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .dragging {
+      opacity: 0.45;
+    }
+
+    body.dragging-active {
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .task-list {
+      margin-top: 10px;
+      border-radius: 10px;
+      min-height: 8px;
+    }
+
+    .task-row.drop-before,
+    .category-card.drop-before {
+      box-shadow: inset 0 2px 0 0 var(--accent);
+    }
+
+    .task-row.drop-after,
+    .category-card.drop-after {
+      box-shadow: inset 0 -2px 0 0 var(--accent);
+    }
+
+    .task-list.drop-end,
+    .category-list.drop-end {
+      outline: 2px dashed rgba(90, 169, 255, 0.65);
+      outline-offset: 3px;
+    }
+
+    .category-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .run-task-row {
+      grid-template-columns: auto 1fr;
+    }
+
+    .btn-small {
+      min-height: 34px;
+      padding: 0 10px;
+      font-size: 0.9rem;
+    }
+
+    .btn-danger {
+      border-color: rgba(255, 107, 107, 0.6);
+      color: #ffd7d7;
+    }
+
+    .btn-ok {
+      border-color: rgba(64, 215, 140, 0.6);
+      color: #ddffef;
+    }
+
+    .input {
+      width: 100%;
+      min-height: var(--tap);
+      border: 1px solid var(--line);
+      background: #12161f;
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+
+    .checkbox {
+      width: 22px;
+      height: 22px;
+      accent-color: var(--accent);
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+    }
+
+    .section-title {
+      margin: 4px 0;
+      font-size: 0.95rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* Notes panel */
+    .notes-panel {
+      flex-shrink: 0;
+      margin-top: 10px;
+      max-height: 25vh;
+      display: flex;
+      flex-direction: column;
+      z-index: 15;
+    }
+
+    .notes-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: start;
+    }
+
+    .notes-textarea {
+      width: 100%;
+      min-height: 60px;
+      max-height: 25vh;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 0.85rem;
+      line-height: 1.4;
+      resize: none;
+    }
+
+    .notes-textarea::placeholder {
+      color: var(--muted);
+    }
+
+    .btn-clear-notes {
+      min-height: 44px;
+      padding: 0 10px;
+      font-size: 0.78rem;
+      border-color: rgba(255, 107, 107, 0.4);
+      color: #ffd7d7;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="switch">
+      <button id="runModeBtn" type="button">Run</button>
+      <button id="setupModeBtn" type="button">Setup</button>
+      <button id="undoBtn" type="button" class="btn-ok" disabled>Undo</button>
+      <button id="redoBtn" type="button" class="btn-ok" disabled>Redo</button>
+      <button id="uncheckAllBtn" type="button" class="btn-danger">Uncheck All</button>
+    </div>
+
+    <div class="main-content">
+      <section id="runView" class="view"></section>
+      <section id="setupView" class="view hidden"></section>
+    </div>
+
+    <div id="notesPanel" class="notes-panel card">
+      <div class="notes-row">
+        <textarea id="notesTextarea" class="notes-textarea" placeholder="Session notes, reminders..."></textarea>
+        <button id="clearNotesBtn" type="button" class="btn-clear-notes">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const STORAGE_KEY = 'lightingOpsTodo.v2';
+      const UNDO_STACK_KEY = 'lightingOpsTodo.undoStack.v1';
+      const REDO_STACK_KEY = 'lightingOpsTodo.redoStack.v1';
+      const MAX_UNDO_STEPS = 20;
+      let mode = 'run';
+      let activeDrag = null;
+
+      const runModeBtn = document.getElementById('runModeBtn');
+      const setupModeBtn = document.getElementById('setupModeBtn');
+      const undoBtn = document.getElementById('undoBtn');
+      const redoBtn = document.getElementById('redoBtn');
+      const uncheckAllBtn = document.getElementById('uncheckAllBtn');
+      const runView = document.getElementById('runView');
+      const setupView = document.getElementById('setupView');
+      const notesPanel = document.getElementById('notesPanel');
+      const notesTextarea = document.getElementById('notesTextarea');
+      const clearNotesBtn = document.getElementById('clearNotesBtn');
+
+      const initialState = () => ({
+        version: 2,
+        categories: [],
+        parkingLot: [],
+        notes: ''
+      });
+
+      function makeId(prefix) {
+        if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+          return prefix + '_' + window.crypto.randomUUID();
+        }
+        return prefix + '_' + Date.now().toString(16) + '-' + Math.random().toString(16).slice(2, 10);
+      }
+
+      function normalizeState(raw) {
+        if (!raw || typeof raw !== 'object') return initialState();
+
+        const categories = Array.isArray(raw.categories) ? raw.categories : [];
+        const parkingLot = Array.isArray(raw.parkingLot) ? raw.parkingLot : [];
+        const notes = typeof raw.notes === 'string' ? raw.notes : '';
+
+        return {
+          version: 2,
+          categories: categories
+            .filter(c => c && typeof c === 'object')
+            .map(c => ({
+              id: typeof c.id === 'string' ? c.id : makeId('cat'),
+              name: typeof c.name === 'string' ? c.name : '',
+              tasks: (Array.isArray(c.tasks) ? c.tasks : [])
+                .filter(t => t && typeof t === 'object')
+                .map(t => ({
+                  id: typeof t.id === 'string' ? t.id : makeId('tsk'),
+                  text: typeof t.text === 'string' ? t.text : '',
+                  checked: Boolean(t.checked)
+                }))
+            })),
+          parkingLot: parkingLot
+            .filter(t => t && typeof t === 'object')
+            .map(t => ({
+              id: typeof t.id === 'string' ? t.id : makeId('tsk'),
+              text: typeof t.text === 'string' ? t.text : '',
+              checked: Boolean(t.checked),
+              originCategoryId: typeof t.originCategoryId === 'string' ? t.originCategoryId : null
+            })),
+          notes
+        };
+      }
+
+      function loadState() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return initialState();
+          return normalizeState(JSON.parse(raw));
+        } catch (_) {
+          return initialState();
+        }
+      }
+
+      function saveState() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      }
+
+      function loadUndoStack() {
+        try {
+          const raw = localStorage.getItem(UNDO_STACK_KEY);
+          if (!raw) return [];
+          const parsed = JSON.parse(raw);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (_) {
+          return [];
+        }
+      }
+
+      function saveUndoStack(stack) {
+        if (!stack || stack.length === 0) {
+          localStorage.removeItem(UNDO_STACK_KEY);
+          undoBtn.disabled = true;
+          return;
+        }
+        localStorage.setItem(UNDO_STACK_KEY, JSON.stringify(stack));
+        undoBtn.disabled = false;
+      }
+
+      function loadRedoStack() {
+        try {
+          const raw = localStorage.getItem(REDO_STACK_KEY);
+          if (!raw) return [];
+          const parsed = JSON.parse(raw);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (_) {
+          return [];
+        }
+      }
+
+      function saveRedoStack(stack) {
+        if (!stack || stack.length === 0) {
+          localStorage.removeItem(REDO_STACK_KEY);
+          redoBtn.disabled = true;
+          return;
+        }
+        localStorage.setItem(REDO_STACK_KEY, JSON.stringify(stack));
+        redoBtn.disabled = false;
+      }
+
+      function clearRedoStack() {
+        localStorage.removeItem(REDO_STACK_KEY);
+        redoBtn.disabled = true;
+      }
+
+      function saveUndoSnapshot() {
+        const stack = loadUndoStack();
+        stack.push(state);
+        if (stack.length > MAX_UNDO_STEPS) {
+          stack.splice(0, stack.length - MAX_UNDO_STEPS);
+        }
+        saveUndoStack(stack);
+        clearRedoStack();
+      }
+
+      function commit(mutator, rerender = true) {
+        saveUndoSnapshot();
+        mutator(state);
+        saveState();
+        if (rerender) render();
+      }
+
+      function undo() {
+        const undoStack = loadUndoStack();
+        if (undoStack.length === 0) return;
+
+        const redoStack = loadRedoStack();
+        redoStack.push(state);
+        saveRedoStack(redoStack);
+
+        const snapshot = undoStack.pop();
+        saveUndoStack(undoStack);
+
+        state = normalizeState(snapshot);
+        saveState();
+        notesTextarea.value = state.notes || '';
+        render();
+      }
+
+      function redo() {
+        const redoStack = loadRedoStack();
+        if (redoStack.length === 0) return;
+
+        const undoStack = loadUndoStack();
+        undoStack.push(state);
+        saveUndoStack(undoStack);
+
+        const snapshot = redoStack.pop();
+        saveRedoStack(redoStack);
+
+        state = normalizeState(snapshot);
+        saveState();
+        notesTextarea.value = state.notes || '';
+        render();
+      }
+
+      function escapeText(value) {
+        return String(value == null ? '' : value);
+      }
+
+      function findCategory(catId) {
+        return state.categories.find(c => c.id === catId) || null;
+      }
+
+      function clear(el) {
+        while (el.firstChild) el.removeChild(el.firstChild);
+      }
+
+      function makeButton(label, className, onClick) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = label;
+        if (className) btn.className = className;
+        btn.addEventListener('click', onClick);
+        return btn;
+      }
+
+      function bindEnterToAction(inputEl, action) {
+        inputEl.addEventListener('keydown', (e) => {
+          const isEnter = e.key === 'Enter' || e.code === 'Enter' || e.keyCode === 13 || e.which === 13;
+          if (!isEnter || e.isComposing) return;
+          e.preventDefault();
+          e.stopPropagation();
+          action();
+        });
+      }
+
+      function makeDragHandle(ariaLabel, onPointerDown) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn-small drag-handle';
+        btn.textContent = '⋮⋮';
+        btn.setAttribute('aria-label', ariaLabel);
+        btn.title = ariaLabel;
+        btn.addEventListener('pointerdown', onPointerDown);
+        return btn;
+      }
+
+      function setMode(nextMode) {
+        mode = nextMode === 'setup' ? 'setup' : 'run';
+        render();
+      }
+
+      function moveCategoryToIndex(categoryId, targetIndex) {
+        commit(s => {
+          const fromIndex = s.categories.findIndex(c => c.id === categoryId);
+          if (fromIndex < 0) return;
+
+          const clamped = Math.max(0, Math.min(targetIndex, s.categories.length));
+          if (clamped === fromIndex || clamped === fromIndex + 1) return;
+
+          const [category] = s.categories.splice(fromIndex, 1);
+          let insertIndex = clamped;
+          if (fromIndex < insertIndex) insertIndex -= 1;
+          s.categories.splice(insertIndex, 0, category);
+        });
+      }
+
+      function moveTaskToIndex(sourceCategoryId, taskId, targetCategoryId, targetIndex) {
+        commit(s => {
+          const sourceCategory = s.categories.find(c => c.id === sourceCategoryId);
+          const targetCategory = s.categories.find(c => c.id === targetCategoryId);
+          if (!sourceCategory || !targetCategory) return;
+
+          const sourceIndex = sourceCategory.tasks.findIndex(t => t.id === taskId);
+          if (sourceIndex < 0) return;
+
+          const clamped = Math.max(0, Math.min(targetIndex, targetCategory.tasks.length));
+          if (sourceCategory === targetCategory && (clamped === sourceIndex || clamped === sourceIndex + 1)) return;
+
+          const [task] = sourceCategory.tasks.splice(sourceIndex, 1);
+          let insertIndex = clamped;
+
+          if (sourceCategory === targetCategory && sourceIndex < insertIndex) {
+            insertIndex -= 1;
+          }
+
+          insertIndex = Math.max(0, Math.min(insertIndex, targetCategory.tasks.length));
+          targetCategory.tasks.splice(insertIndex, 0, task);
+        });
+      }
+
+      function parkTask(categoryId, taskId) {
+        commit(s => {
+          const cat = s.categories.find(c => c.id === categoryId);
+          if (!cat) return;
+          const idx = cat.tasks.findIndex(t => t.id === taskId);
+          if (idx < 0) return;
+          const task = cat.tasks[idx];
+          cat.tasks.splice(idx, 1);
+          s.parkingLot.push({
+            id: task.id,
+            text: task.text,
+            checked: task.checked,
+            originCategoryId: categoryId
+          });
+        });
+      }
+
+      function restoreTask(taskId) {
+        commit(s => {
+          const idx = s.parkingLot.findIndex(t => t.id === taskId);
+          if (idx < 0) return;
+
+          const parked = s.parkingLot[idx];
+          let targetCategory = s.categories.find(c => c.id === parked.originCategoryId) || null;
+
+          if (!targetCategory) {
+            targetCategory = s.categories[0] || null;
+          }
+
+          if (!targetCategory) {
+            alert('Create a category first, then restore this task.');
+            return;
+          }
+
+          targetCategory.tasks.push({
+            id: parked.id,
+            text: parked.text,
+            checked: parked.checked
+          });
+
+          s.parkingLot.splice(idx, 1);
+        });
+      }
+
+      function uncheckAll() {
+        const ok = window.confirm('This will uncheck all tasks in active categories and in the parking lot. Continue?');
+        if (!ok) return;
+
+        commit(s => {
+          s.categories.forEach(c => c.tasks.forEach(t => { t.checked = false; }));
+          s.parkingLot.forEach(t => { t.checked = false; });
+        });
+      }
+
+      function clearNotes() {
+        const ok = window.confirm('Clear all notes?');
+        if (!ok) return;
+        commit(s => { s.notes = ''; });
+        notesTextarea.value = '';
+      }
+
+      function clearDropIndicators() {
+        if (!activeDrag) return;
+
+        if (activeDrag.markerEl) {
+          activeDrag.markerEl.classList.remove('drop-before', 'drop-after');
+          activeDrag.markerEl = null;
+          activeDrag.markerPos = null;
+        }
+
+        if (activeDrag.listMarkerEl) {
+          activeDrag.listMarkerEl.classList.remove('drop-end');
+          activeDrag.listMarkerEl = null;
+        }
+      }
+
+      function setDropMarker(el, pos) {
+        if (!activeDrag) return;
+
+        if (activeDrag.markerEl && (activeDrag.markerEl !== el || activeDrag.markerPos !== pos)) {
+          activeDrag.markerEl.classList.remove('drop-before', 'drop-after');
+        }
+
+        if (activeDrag.listMarkerEl) {
+          activeDrag.listMarkerEl.classList.remove('drop-end');
+          activeDrag.listMarkerEl = null;
+        }
+
+        activeDrag.markerEl = el;
+        activeDrag.markerPos = pos;
+        el.classList.remove('drop-before', 'drop-after');
+        el.classList.add(pos === 'before' ? 'drop-before' : 'drop-after');
+      }
+
+      function setListDropMarker(el) {
+        if (!activeDrag) return;
+
+        if (activeDrag.markerEl) {
+          activeDrag.markerEl.classList.remove('drop-before', 'drop-after');
+          activeDrag.markerEl = null;
+          activeDrag.markerPos = null;
+        }
+
+        if (activeDrag.listMarkerEl && activeDrag.listMarkerEl !== el) {
+          activeDrag.listMarkerEl.classList.remove('drop-end');
+        }
+
+        activeDrag.listMarkerEl = el;
+        el.classList.add('drop-end');
+      }
+
+      function updateCategoryDropTarget(x, y) {
+        const el = document.elementFromPoint(x, y);
+        const card = el ? el.closest('.category-card[data-category-id]') : null;
+
+        if (card) {
+          const index = Number(card.dataset.categoryIndex || 0);
+          const rect = card.getBoundingClientRect();
+          const before = y < rect.top + rect.height / 2;
+          setDropMarker(card, before ? 'before' : 'after');
+          activeDrag.drop = { index: index + (before ? 0 : 1) };
+          return;
+        }
+
+        const list = document.getElementById('categoriesList');
+        if (list && el && list.contains(el)) {
+          setListDropMarker(list);
+          activeDrag.drop = { index: state.categories.length };
+          return;
+        }
+
+        clearDropIndicators();
+        activeDrag.drop = null;
+      }
+
+      function updateTaskDropTarget(x, y) {
+        const el = document.elementFromPoint(x, y);
+        const row = el ? el.closest('.task-row[data-task-id][data-category-id]') : null;
+
+        if (row) {
+          const targetCategoryId = row.dataset.categoryId;
+          const targetIndex = Number(row.dataset.taskIndex || 0);
+          const rect = row.getBoundingClientRect();
+          const before = y < rect.top + rect.height / 2;
+          setDropMarker(row, before ? 'before' : 'after');
+          activeDrag.drop = {
+            categoryId: targetCategoryId,
+            index: targetIndex + (before ? 0 : 1)
+          };
+          return;
+        }
+
+        let list = el ? el.closest('.task-list[data-category-id]') : null;
+        if (!list) {
+          const card = el ? el.closest('.category-card[data-category-id]') : null;
+          if (card) list = card.querySelector('.task-list[data-category-id]');
+        }
+
+        if (list) {
+          setListDropMarker(list);
+          activeDrag.drop = {
+            categoryId: list.dataset.categoryId,
+            index: Number(list.dataset.taskCount || 0)
+          };
+          return;
+        }
+
+        clearDropIndicators();
+        activeDrag.drop = null;
+      }
+
+      function updateDragTarget(x, y) {
+        if (!activeDrag) return;
+        if (activeDrag.kind === 'category') {
+          updateCategoryDropTarget(x, y);
+          return;
+        }
+        updateTaskDropTarget(x, y);
+      }
+
+      function finishDrag(commitDrop) {
+        if (!activeDrag) return;
+
+        const drag = activeDrag;
+        activeDrag = null;
+
+        window.removeEventListener('pointermove', onGlobalPointerMove);
+        window.removeEventListener('pointerup', onGlobalPointerUp);
+        window.removeEventListener('pointercancel', onGlobalPointerCancel);
+
+        document.body.classList.remove('dragging-active');
+        if (drag.sourceEl) drag.sourceEl.classList.remove('dragging');
+
+        if (drag.markerEl) drag.markerEl.classList.remove('drop-before', 'drop-after');
+        if (drag.listMarkerEl) drag.listMarkerEl.classList.remove('drop-end');
+
+        if (!commitDrop || !drag.drop) return;
+
+        if (drag.kind === 'category') {
+          moveCategoryToIndex(drag.categoryId, drag.drop.index);
+          return;
+        }
+
+        moveTaskToIndex(drag.categoryId, drag.taskId, drag.drop.categoryId, drag.drop.index);
+      }
+
+      function onGlobalPointerMove(e) {
+        if (!activeDrag) return;
+        if (activeDrag.pointerId != null && e.pointerId !== activeDrag.pointerId) return;
+        if (e.cancelable) e.preventDefault();
+        updateDragTarget(e.clientX, e.clientY);
+      }
+
+      function onGlobalPointerUp(e) {
+        if (!activeDrag) return;
+        if (activeDrag.pointerId != null && e.pointerId !== activeDrag.pointerId) return;
+        if (e.cancelable) e.preventDefault();
+        finishDrag(true);
+      }
+
+      function onGlobalPointerCancel(e) {
+        if (!activeDrag) return;
+        if (activeDrag.pointerId != null && e.pointerId !== activeDrag.pointerId) return;
+        finishDrag(false);
+      }
+
+      function startDrag(e, data) {
+        if (e.button != null && e.button !== 0) return;
+        if (e.cancelable) e.preventDefault();
+        e.stopPropagation();
+
+        if (activeDrag) finishDrag(false);
+
+        const sourceEl = data.kind === 'category'
+          ? e.currentTarget.closest('.category-card[data-category-id]')
+          : e.currentTarget.closest('.task-row[data-task-id][data-category-id]');
+
+        if (!sourceEl) return;
+
+        activeDrag = {
+          kind: data.kind,
+          categoryId: data.categoryId,
+          taskId: data.taskId || null,
+          pointerId: e.pointerId,
+          sourceEl,
+          drop: null,
+          markerEl: null,
+          markerPos: null,
+          listMarkerEl: null
+        };
+
+        sourceEl.classList.add('dragging');
+        document.body.classList.add('dragging-active');
+
+        if (typeof e.currentTarget.setPointerCapture === 'function' && e.pointerId != null) {
+          try {
+            e.currentTarget.setPointerCapture(e.pointerId);
+          } catch (_) {
+            // Ignore capture errors from older browsers.
+          }
+        }
+
+        window.addEventListener('pointermove', onGlobalPointerMove, { passive: false });
+        window.addEventListener('pointerup', onGlobalPointerUp, { passive: false });
+        window.addEventListener('pointercancel', onGlobalPointerCancel, { passive: false });
+
+        updateDragTarget(e.clientX, e.clientY);
+      }
+
+      function startCategoryDrag(e, categoryId) {
+        startDrag(e, { kind: 'category', categoryId });
+      }
+
+      function startTaskDrag(e, categoryId, taskId) {
+        startDrag(e, { kind: 'task', categoryId, taskId });
+      }
+
+      function renderRunView() {
+        clear(runView);
+
+        const activeCategories = state.categories.filter(c => c.tasks.length > 0);
+        if (activeCategories.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'card muted';
+          empty.textContent = 'No active tasks yet. Switch to Setup to add categories and tasks.';
+          runView.appendChild(empty);
+          return;
+        }
+
+        activeCategories.forEach(category => {
+          const card = document.createElement('div');
+          card.className = 'card';
+
+          const title = document.createElement('h2');
+          title.textContent = category.name || '(Unnamed category)';
+          card.appendChild(title);
+
+          category.tasks.forEach(task => {
+            const row = document.createElement('div');
+            row.className = 'task-row run-task-row';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'checkbox';
+            checkbox.checked = !!task.checked;
+            checkbox.addEventListener('change', () => {
+              saveUndoSnapshot();
+              task.checked = checkbox.checked;
+              saveState();
+              label.classList.toggle('checked', checkbox.checked);
+            });
+
+            const label = document.createElement('div');
+            label.className = 'task-text' + (task.checked ? ' checked' : '');
+            label.textContent = task.text || '(Untitled task)';
+
+            row.appendChild(checkbox);
+            row.appendChild(label);
+            card.appendChild(row);
+          });
+
+          runView.appendChild(card);
+        });
+      }
+
+      function renderSetupView() {
+        clear(setupView);
+
+        const addCategoryCard = document.createElement('div');
+        addCategoryCard.className = 'card';
+
+        const title = document.createElement('div');
+        title.className = 'section-title';
+        title.textContent = 'Categories';
+
+        const addCategoryForm = document.createElement('form');
+        addCategoryForm.className = 'split';
+
+        const input = document.createElement('input');
+        input.className = 'input';
+        input.type = 'text';
+        input.placeholder = 'New category / phase';
+
+        const addCategory = () => {
+          const name = escapeText(input.value).trim();
+          if (!name) return;
+          commit(s => {
+            s.categories.push({ id: makeId('cat'), name, tasks: [] });
+          });
+          input.value = '';
+        };
+
+        const addBtn = makeButton('Add', '', addCategory);
+
+        addCategoryForm.addEventListener('submit', (e) => {
+          e.preventDefault();
+          addCategory();
+        });
+
+        bindEnterToAction(input, addCategory);
+
+        addCategoryForm.appendChild(input);
+        addCategoryForm.appendChild(addBtn);
+
+        addCategoryCard.appendChild(title);
+        addCategoryCard.appendChild(addCategoryForm);
+        setupView.appendChild(addCategoryCard);
+
+        const categoriesList = document.createElement('div');
+        categoriesList.id = 'categoriesList';
+        categoriesList.className = 'category-list';
+        setupView.appendChild(categoriesList);
+
+        if (state.categories.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'card muted';
+          empty.textContent = 'No categories yet. Add your first one above.';
+          categoriesList.appendChild(empty);
+        }
+
+        state.categories.forEach((category, catIndex) => {
+          const card = document.createElement('div');
+          card.className = 'card category-card';
+          card.dataset.categoryId = category.id;
+          card.dataset.categoryIndex = String(catIndex);
+
+          const topRow = document.createElement('div');
+          topRow.className = 'row';
+
+          const dragHandle = makeDragHandle('Drag category', (e) => startCategoryDrag(e, category.id));
+
+          const nameInput = document.createElement('input');
+          nameInput.className = 'input';
+          nameInput.type = 'text';
+          nameInput.value = category.name;
+          nameInput.placeholder = 'Category name';
+          nameInput.style.flex = '1 1 220px';
+          nameInput.addEventListener('input', () => {
+            category.name = escapeText(nameInput.value);
+            saveState();
+          });
+
+          const controls = document.createElement('div');
+          controls.className = 'controls';
+          controls.appendChild(makeButton('Delete', 'btn-small btn-danger', () => {
+            const ok = confirm('Delete this category and its active tasks?');
+            if (!ok) return;
+            commit(s => {
+              s.categories = s.categories.filter(c => c.id !== category.id);
+              s.parkingLot.forEach(t => {
+                if (t.originCategoryId === category.id) t.originCategoryId = null;
+              });
+            });
+          }));
+
+          topRow.appendChild(nameInput);
+          topRow.appendChild(dragHandle);
+          topRow.appendChild(controls);
+          card.appendChild(topRow);
+
+          const addTaskForm = document.createElement('form');
+          addTaskForm.className = 'split';
+          addTaskForm.style.marginTop = '10px';
+
+          const taskInput = document.createElement('input');
+          taskInput.className = 'input';
+          taskInput.type = 'text';
+          taskInput.placeholder = 'New task';
+
+          const addTask = () => {
+            const text = escapeText(taskInput.value).trim();
+            if (!text) return;
+            commit(s => {
+              const c = s.categories.find(x => x.id === category.id);
+              if (!c) return;
+              c.tasks.push({ id: makeId('tsk'), text, checked: false });
+            });
+            taskInput.value = '';
+          };
+
+          const addTaskBtn = makeButton('Add Task', '', addTask);
+
+          addTaskForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            addTask();
+          });
+
+          bindEnterToAction(taskInput, addTask);
+
+          addTaskForm.appendChild(taskInput);
+          addTaskForm.appendChild(addTaskBtn);
+          card.appendChild(addTaskForm);
+
+          const taskList = document.createElement('div');
+          taskList.className = 'task-list';
+          taskList.dataset.categoryId = category.id;
+          taskList.dataset.taskCount = String(category.tasks.length);
+
+          if (category.tasks.length === 0) {
+            const emptyTask = document.createElement('div');
+            emptyTask.className = 'muted';
+            emptyTask.style.marginTop = '10px';
+            emptyTask.textContent = 'No tasks in this category yet.';
+            taskList.appendChild(emptyTask);
+          }
+
+          category.tasks.forEach((task, taskIndex) => {
+            const row = document.createElement('div');
+            row.className = 'task-row';
+            row.dataset.categoryId = category.id;
+            row.dataset.taskId = task.id;
+            row.dataset.taskIndex = String(taskIndex);
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'checkbox';
+            checkbox.checked = !!task.checked;
+            checkbox.addEventListener('change', () => {
+              saveUndoSnapshot();
+              task.checked = checkbox.checked;
+              saveState();
+            });
+
+            const middle = document.createElement('div');
+            middle.className = 'row';
+
+            const taskTextInput = document.createElement('input');
+            taskTextInput.className = 'input';
+            taskTextInput.type = 'text';
+            taskTextInput.value = task.text;
+            taskTextInput.placeholder = 'Task text';
+            taskTextInput.addEventListener('input', () => {
+              task.text = escapeText(taskTextInput.value);
+              saveState();
+            });
+
+            middle.appendChild(taskTextInput);
+
+            const rowControls = document.createElement('div');
+            rowControls.className = 'controls';
+            rowControls.appendChild(makeDragHandle('Drag task', (e) => startTaskDrag(e, category.id, task.id)));
+            rowControls.appendChild(makeButton('Park', 'btn-small', () => parkTask(category.id, task.id)));
+            rowControls.appendChild(makeButton('Delete', 'btn-small btn-danger', () => {
+              commit(s => {
+                const c = s.categories.find(x => x.id === category.id);
+                if (!c) return;
+                c.tasks = c.tasks.filter(x => x.id !== task.id);
+              });
+            }));
+
+            row.appendChild(checkbox);
+            row.appendChild(middle);
+            row.appendChild(rowControls);
+            taskList.appendChild(row);
+          });
+
+          card.appendChild(taskList);
+          categoriesList.appendChild(card);
+        });
+
+        const parkingCard = document.createElement('div');
+        parkingCard.className = 'card';
+
+        const parkingTitle = document.createElement('div');
+        parkingTitle.className = 'section-title';
+        parkingTitle.textContent = 'Parking Lot';
+        parkingCard.appendChild(parkingTitle);
+
+        if (state.parkingLot.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'muted';
+          empty.textContent = 'Parking lot is empty.';
+          parkingCard.appendChild(empty);
+        }
+
+        state.parkingLot.forEach(task => {
+          const row = document.createElement('div');
+          row.className = 'task-row';
+
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.className = 'checkbox';
+          checkbox.checked = !!task.checked;
+          checkbox.addEventListener('change', () => {
+            saveUndoSnapshot();
+            task.checked = checkbox.checked;
+            saveState();
+          });
+
+          const details = document.createElement('div');
+          const taskText = document.createElement('div');
+          taskText.className = 'task-text' + (task.checked ? ' checked' : '');
+          taskText.textContent = task.text || '(Untitled task)';
+
+          const origin = document.createElement('div');
+          origin.className = 'muted';
+          const originCategory = findCategory(task.originCategoryId);
+          origin.textContent = 'Origin: ' + (originCategory ? (originCategory.name || '(Unnamed category)') : 'Missing category');
+
+          details.appendChild(taskText);
+          details.appendChild(origin);
+
+          const controls = document.createElement('div');
+          controls.className = 'controls';
+          controls.appendChild(makeButton('Restore', 'btn-small btn-ok', () => restoreTask(task.id)));
+          controls.appendChild(makeButton('Delete', 'btn-small btn-danger', () => {
+            commit(s => {
+              s.parkingLot = s.parkingLot.filter(x => x.id !== task.id);
+            });
+          }));
+
+          row.appendChild(checkbox);
+          row.appendChild(details);
+          row.appendChild(controls);
+          parkingCard.appendChild(row);
+        });
+
+        setupView.appendChild(parkingCard);
+      }
+
+      function render() {
+        if (activeDrag) finishDrag(false);
+
+        runModeBtn.classList.toggle('active', mode === 'run');
+        setupModeBtn.classList.toggle('active', mode === 'setup');
+        uncheckAllBtn.classList.toggle('hidden', mode !== 'run');
+
+        runView.classList.toggle('hidden', mode !== 'run');
+        setupView.classList.toggle('hidden', mode !== 'setup');
+        notesPanel.classList.toggle('hidden', mode !== 'run');
+
+        renderRunView();
+        renderSetupView();
+      }
+
+      runModeBtn.addEventListener('click', () => setMode('run'));
+      setupModeBtn.addEventListener('click', () => setMode('setup'));
+      uncheckAllBtn.addEventListener('click', uncheckAll);
+      undoBtn.addEventListener('click', undo);
+      redoBtn.addEventListener('click', redo);
+      clearNotesBtn.addEventListener('click', clearNotes);
+
+      // Notes handling with debounce
+      let notesTimeout = null;
+      notesTextarea.addEventListener('input', () => {
+        if (notesTimeout) clearTimeout(notesTimeout);
+        notesTimeout = setTimeout(() => {
+          state.notes = notesTextarea.value;
+          saveState();
+        }, 300);
+      });
+
+      // Service Worker registration
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js')
+          .then(function(reg) {
+            console.log('SW registered:', reg.scope);
+          })
+          .catch(function(err) {
+            console.log('SW registration failed:', err);
+          });
+      }
+
+      let state = loadState();
+      notesTextarea.value = state.notes || '';
+      undoBtn.disabled = loadUndoStack().length === 0;
+      redoBtn.disabled = loadRedoStack().length === 0;
+      render();
+    })();
+  </script>
+</body>
+</html>
