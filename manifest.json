@@ -1,6 +1,6 @@
 {
   "name": "Lighting Ops Todo",
-  "short_name": "Ops Todo",
+  "short_name": "Lighting Ops Todo",
   "description": "Local-first checklist for lighting operations",
   "start_url": "./index.html",
   "display": "standalone",
